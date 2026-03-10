@@ -44,7 +44,7 @@ services:
   postgres:
     image: postgres:17-alpine
     container_name: postgres
-    environment:  # Лучше использовать environment вместо env_file для важных переменных
+    environment:  
       POSTGRES_USER: auth_user
       POSTGRES_PASSWORD: auth_user_password
       POSTGRES_DB: system_time_db
@@ -52,7 +52,6 @@ services:
       - "5434:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      # Монтируем SQL скрипт для инициализации (относительный путь от docker-compose.yml)
       - ./app/infrastructure/database/create.sql:/docker-entrypoint-initdb.d/01-create.sql
     networks:
       - system_time-network
@@ -73,6 +72,8 @@ services:
       - "8001:8001"
     env_file:
       - app/.env
+    volumes:  
+      - ./app:/app  
     depends_on:
       postgres:
         condition: service_healthy
@@ -85,7 +86,7 @@ services:
 
 volumes:
   keycloak-postgres-data:
-  postgres-data:  # Добавил volume для основной БД
+  postgres-data:  
 
 networks:
   system_time-network:
