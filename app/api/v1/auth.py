@@ -2,33 +2,19 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from typing import Dict, Any
 
-from . import schemas
-from .auth_service import AuthService
-from .keycloak_client import KeycloakClient
-from .database import get_db
+from app.core.database import get_db
+from app.services.auth_service import AuthService
+from app.schemas.employee import UserRegister, UserLogin, RefreshRequest, TokenResponse
 
-router = APIRouter(prefix="/auth", tags=["Authentication"])
-
-# Конфигурация Keycloak (возьмите из переменных окружения)
-KEYCLOAK_CONFIG = {
-    "server_url": "http://localhost:8080/",
-    "realm": "your-realm",
-    "client_id": "your-client",
-    "client_secret": "your-client-secret"
-}
-
-# Инициализация клиента (лучше сделать синглтоном)
-kc_client = KeycloakClient(**KEYCLOAK_CONFIG)
-
+router = APIRouter(tags=["Authentication"])
 
 def get_auth_service(db: Session = Depends(get_db)) -> AuthService:
-    return AuthService(db, kc_client)
-
+    return AuthService(db)
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
-async def register_user(
-        request: Request,
-        service: AuthService = Depends(get_auth_service)
+async def register(
+    request: Request,
+    service: AuthService = Depends(get_auth_service)
 ):
     """Регистрация нового пользователя"""
     try:
@@ -38,13 +24,12 @@ async def register_user(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail=str(e))
 
-
-@router.post("/login")
-async def login_user(
-        request: Request,
-        service: AuthService = Depends(get_auth_service)
+@router.post("/login", response_model=Dict[str, Any])
+async def login(
+    request: Request,
+    service: AuthService = Depends(get_auth_service)
 ):
     """Аутентификация пользователя"""
     try:
@@ -54,13 +39,12 @@ async def login_user(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=401, detail="Authentication failed")
-
+        raise HTTPException(status_code=401, detail=str(e))
 
 @router.post("/refresh")
 async def refresh_token(
-        request: Request,
-        service: AuthService = Depends(get_auth_service)
+    request: Request,
+    service: AuthService = Depends(get_auth_service)
 ):
     """Обновление токена"""
     try:
@@ -70,13 +54,12 @@ async def refresh_token(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=401, detail="Token refresh failed")
-
+        raise HTTPException(status_code=401, detail=str(e))
 
 @router.post("/logout")
-async def logout_user(
-        request: Request,
-        service: AuthService = Depends(get_auth_service)
+async def logout(
+    request: Request,
+    service: AuthService = Depends(get_auth_service)
 ):
     """Выход из системы"""
     try:
@@ -84,17 +67,16 @@ async def logout_user(
         refresh_token = body.get("refresh_token")
         if not refresh_token:
             raise HTTPException(status_code=400, detail="Refresh token required")
-
+        
         result = await service.logout(refresh_token)
         return result
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-
 @router.post("/validate")
 async def validate_token(
-        request: Request,
-        service: AuthService = Depends(get_auth_service)
+    request: Request,
+    service: AuthService = Depends(get_auth_service)
 ):
     """Валидация токена"""
     try:
@@ -102,7 +84,7 @@ async def validate_token(
         token = body.get("token")
         if not token:
             raise HTTPException(status_code=400, detail="Token required")
-
+        
         result = await service.validate_token(token)
         return result
     except Exception as e:

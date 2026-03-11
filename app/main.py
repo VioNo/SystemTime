@@ -1,10 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.core.config import settings
-from app.core.database import engine
-from app.models import Base
-from app.api.v1 import auth, employees#, projects, timesheet
+from core.config import settings
+from core.database import engine
+from models import Base
+from api.v1 import auth, employees#, projects, timesheet
 
 # Создание таблиц в БД (только для разработки)
 # В продакшене используйте alembic миграции

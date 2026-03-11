@@ -1,122 +1,48 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import Optional, List
-
-
-class SharedJWTConfig(BaseSettings):
-    """Общая конфигурация JWT"""
-    model_config = SettingsConfigDict(
-        env_nested_delimiter="__",
-        env_prefix="SHARED__JWT__",
-        case_sensitive=False,
-    )
-
-    secret: str
-    algorithm: str = "HS256"
-    issuer: str
-    audience: str
-    expire_minutes: int = 5
-
-
-class KeycloakConfig(BaseSettings):
-    """Конфигурация Keycloak"""
-    model_config = SettingsConfigDict(
-        env_nested_delimiter="__",
-        env_prefix="KEYCLOAK__",
-        case_sensitive=False,
-    )
-
-    server_url: str
-    realm: str
-
-
-class AuthKeycloakClientConfig(BaseSettings):
-    """Конфигурация клиента Keycloak для auth-сервиса"""
-    model_config = SettingsConfigDict(
-        env_nested_delimiter="__",
-        env_prefix="AUTH__KEYCLOAK__",
-        case_sensitive=False,
-    )
-
-    client_id: str
-    client_secret: Optional[str] = None
-    default_role: str = "user"
-
-
-class AuthServiceConfig(BaseSettings):
-    """Основные настройки auth-сервиса"""
-    model_config = SettingsConfigDict(
-        env_nested_delimiter="__",
-        env_prefix="AUTH__",
-        case_sensitive=False,
-    )
-
-    debug: bool = True
-    service_name: str = "systemtime-auth"
-    service_port: int = 8001
-    service_host: str = "localhost"
-
-
-class FrontendConfig(BaseSettings):
-    """Конфигурация фронтенда"""
-    model_config = SettingsConfigDict(
-        env_nested_delimiter="__",
-        env_prefix="FRONTEND__",
-        case_sensitive=False,
-    )
-
-    urls: str = "http://localhost:3000,http://localhost:3001"
-
-    @property
-    def urls_list(self) -> List[str]:
-        """Список URL фронтенда для CORS"""
-        return [url.strip() for url in self.urls.split(",")]
-
+from typing import List, Optional
 
 class Settings(BaseSettings):
-    """
-    Композитная конфигурация для монолитного auth-сервиса.
-    """
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore"
     )
-
-    # Вложенные конфигурации
-    jwt: SharedJWTConfig = SharedJWTConfig()
-    keycloak: KeycloakConfig = KeycloakConfig()
-    auth_keycloak: AuthKeycloakClientConfig = AuthKeycloakClientConfig()
-    service: AuthServiceConfig = AuthServiceConfig()
-    frontend: FrontendConfig = FrontendConfig()
-
+    
+    # Service
+    SERVICE_NAME: str = "system-time"
+    SERVICE_PORT: int = 8001
+    SERVICE_HOST: str = "localhost"
+    DEBUG: bool = True
+    
+    # Database
+    POSTGRES_USER: str = "auth_user"
+    POSTGRES_PASSWORD: str = "auth_user_password"
+    POSTGRES_HOST: str = "postgres"
+    POSTGRES_PORT: int = 5432
+    POSTGRES_DB: str = "system_time_db"
+    
+    # Keycloak
+    KEYCLOAK_URL: str = "http://keycloak:8080"
+    KEYCLOAK_REALM: str = "master"
+    KEYCLOAK_CLIENT_ID: str = "python-app"
+    KEYCLOAK_CLIENT_SECRET: str = ""
+    KEYCLOAK_ADMIN_USERNAME: str = "admin"
+    KEYCLOAK_ADMIN_PASSWORD: str = "admin"
+    
+    # Frontend
+    FRONTEND_URLS: str = "http://localhost:3000,http://localhost:3001"
+    
     @property
-    def debug(self) -> bool:
-        return self.service.debug
-
+    def database_url(self) -> str:
+        return f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+    
     @property
-    def service_name(self) -> str:
-        return self.service.service_name
-
+    def async_database_url(self) -> str:
+        return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+    
     @property
-    def app_name(self) -> str:
-        return "SystemTime Auth Service"
+    def frontend_urls_list(self) -> List[str]:
+        return [url.strip() for url in self.FRONTEND_URLS.split(",")]
 
-    @property
-    def frontend_urls(self) -> List[str]:
-        """Список URL фронтенда для CORS"""
-        return self.frontend.urls_list
-
-
-# Создаем глобальный экземпляр настроек
 settings = Settings()
-
-__all__ = [
-    "settings",
-    "Settings",
-    "KeycloakConfig",
-    "AuthKeycloakClientConfig",
-    "AuthServiceConfig",
-    "FrontendConfig",
-    "SharedJWTConfig"
-]
